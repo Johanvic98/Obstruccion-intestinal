@@ -1,35 +1,925 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Curso Interactivo: Obstrucción Intestinal Baja</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Curso Interactivo de Preparación ATLS</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        .dropzone {
+            min-height: 50px;
+            border: 2px dashed #cbd5e1;
+            transition: background-color 0.2s;
+        }
+        .dragging {
+            opacity: 0.5;
+            background: #e0f2fe;
+        }
+        .drag-over {
+            background-color: #f0f9ff;
+            border-color: #38bdf8;
+        }
+        .draggable-item {
+            cursor: grab;
+        }
+        .draggable-item:active {
+            cursor: grabbing;
+        }
+    </style>
 </head>
-<body>
-    <div class="container">
-        <header>
-            <h1>Curso Interactivo: Obstrucción Intestinal Baja</h1>
-            <div class="progress-bar-container">
-                <div class="progress-bar" id="progressBar"></div>
-                <span id="progressText">0% Completado</span>
+<body class="bg-slate-50">
+
+    <div id="app-container" class="relative min-h-screen lg:flex">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 bg-slate-900 text-slate-300 w-80 p-6 flex flex-col transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out z-30 shadow-2xl">
+            <div class="flex-1 overflow-y-auto min-h-0 pr-2">
+                <h2 class="text-2xl font-bold text-center text-sky-400 border-b border-slate-700 pb-4 mb-6">Módulos ATLS</h2>
+                <ul id="module-list" class="space-y-2"></ul>
             </div>
-        </header>
-        <main>
-            <aside class="sidebar">
-                <h2>Módulos</h2>
-                <nav id="module-nav">
-                    <!-- Los módulos se generarán aquí -->
-                </nav>
-            </aside>
-            <section class="content" id="content-area">
-                <div id="module-content">
-                    <h2>Bienvenido</h2>
-                    <p>Selecciona un módulo del menú de la izquierda para comenzar tu aprendizaje.</p>
-                </div>
-            </section>
+            <button id="reset-button" class="w-full bg-red-600/90 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition-all hover:bg-red-600 active:scale-95 mt-4 flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7V9a1 1 0 01-2 0V3a1 1 0 011-1zm12 1a1 1 0 011 1v3.099A5.002 5.002 0 008.113 14.666 1 1 0 016.228 14A7.002 7.002 0 0115.898 7.534V5a1 1 0 011-1z" clip-rule="evenodd" /></svg>
+                Reiniciar Progreso
+            </button>
+        </aside>
+
+        <!-- Main Content -->
+        <main id="main-content" class="flex-1 lg:ml-80 p-4 sm:p-6 lg:p-8 transition-all duration-300">
+            <!-- Hamburger button for mobile -->
+            <button id="menu-toggle" class="lg:hidden fixed top-4 right-4 bg-white p-2 rounded-full shadow-lg z-40 text-slate-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                </svg>
+            </button>
+
+            <div id="progress-container" class="w-full bg-slate-200 rounded-full mb-8 shadow-inner">
+                <div id="progress-bar" class="bg-sky-500 text-xs font-medium text-white text-center p-1.5 leading-none rounded-full transition-all duration-500" style="width: 0%">0%</div>
+            </div>
+            <div id="module-display" class="transition-opacity duration-300">
+                <!-- El contenido del módulo se insertará aquí -->
+            </div>
         </main>
+        
+        <div id="sidebar-overlay" class="hidden lg:hidden fixed inset-0 bg-black bg-opacity-60 z-20"></div>
+
     </div>
-    <script src="script.js"></script>
+    
+    <!-- Reset Modal -->
+    <div id="reset-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full text-center transform scale-95 transition-transform duration-300">
+            <h3 class="text-xl font-bold text-slate-800">Confirmar Acción</h3>
+            <p class="text-slate-600 my-4">¿Estás seguro de que quieres borrar todo tu progreso? Esta acción no se puede deshacer.</p>
+            <div class="flex justify-center gap-4 mt-6">
+                <button id="cancel-reset" class="py-2 px-6 bg-slate-200 text-slate-800 font-semibold rounded-lg hover:bg-slate-300 transition-colors">Cancelar</button>
+                <button id="confirm-reset" class="py-2 px-6 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const courseModules = [
+            {
+                id: 1,
+                title: "Capítulo 1: Evaluación Inicial",
+                type: 'static', 
+                summary: `La Evaluación Inicial es un enfoque sistemático diseñado para identificar y tratar lesiones que amenazan la vida de forma inmediata...`,
+                clinicalCase: `Un hombre de 34 años es traído al servicio de urgencias tras ser atropellado...`,
+                quiz: [
+                    { type: 'mcq', question: `Según los principios de la Revisión Primaria, ¿cuál es el tratamiento MÁS eficaz para restaurar un gasto cardíaco adecuado en un paciente con hemorragia activa?`, options: ["Administrar un bolo inicial de 2 litros de cristaloide tibio.", "Localizar y detener la fuente del sangrado.", "Iniciar una infusión de vasopresores para mantener la presión arterial.", "Colocar al paciente en posición de Trendelenburg."], answer: 1, justification: `El método MÁS eficaz para restaurar un gasto cardíaco...`, source: `(SECTION I.pdf, Página 10)` },
+                    { type: 'mcq', question: `Durante la evaluación de la "C" (Circulación), ¿cuál es el signo medible MÁS TEMPRANO de hipovolemia en un paciente adulto?`, options: ["Hipotensión (TAS < 90 mmHg).", "Disminución del nivel de conciencia.", "Taquicardia.", "Estrechamiento de la presión de pulso."], answer: 2, justification: `La taquicardia es el signo medible más temprano de la hipovolemia...`, source: `(SECTION I.pdf, Página 80)` },
+                ]
+            },
+            {
+                id: 2,
+                title: "Capítulo 2: Vía Aérea y Ventilación",
+                type: 'static',
+                summary: "Este módulo se centra en las habilidades críticas para evaluar y manejar la vía aérea de un paciente traumatizado...",
+                clinicalCase: "Una mujer de 25 años es traída después de una colisión frontal...",
+                quiz: [
+                    { type: 'fib', question: `Una puntuación en la Escala de Coma de Glasgow de BLANK o inferior generalmente requiere el establecimiento de una vía aérea definitiva.`, answer: "8", justification: `Una GCS de 8 o menos indica un coma...`, source: `(Manual ATLS, 10ª ed.)` },
+                    { type: 'image', question: `Observa la siguiente radiografía de tórax...`, imageUrl: `https://placehold.co/600x400/262626/FFFFFF?text=Radiografía+de+Tórax`, options: ["Tórax inestable (flail chest)", "Neumotórax a tensión", "Contusión pulmonar", "Hemotórax masivo"], answer: 1, justification: `Un neumotórax a tensión se presentaría con un hemitórax radiolúcido...`, source: `(Manual ATLS, 10ª ed.)` },
+                    { type: 'dnd', question: `Ordena los siguientes pasos para una intubación orotraqueal de secuencia rápida (ISR)...`, options: ["Administración de agente de inducción", "Preoxigenación", "Preparación (equipo y personal)", "Administración de agente paralizante", "Posicionamiento del paciente", "Paso del tubo y verificación"], correctOrder: ["Preparación (equipo y personal)", "Preoxigenación", "Posicionamiento del paciente", "Administración de agente de inducción", "Administración de agente paralizante", "Paso del tubo y verificación"], justification: `La secuencia correcta es crucial para una ISR segura...`, source: `(Manual ATLS, 10ª ed.)` }
+                ]
+            },
+            {
+                id: 3,
+                title: "Capítulo 3: Trauma Abdominal Cerrado",
+                type: 'evolutive',
+                summary: "Este caso se centra en un paciente con trauma abdominal cerrado tras una colisión vehicular, evaluando el manejo del shock hemorrágico y la sospecha de lesiones ocultas a través de una simulación lineal de toma de decisiones.",
+                stages: [
+                    { 
+                        clinicalCase: "Un hombre de 28 años, conductor de un coche, es traído al servicio de urgencias tras una colisión frontal a alta velocidad. Estaba usando el cinturón de seguridad y el airbag se desplegó. Se queja de dolor en el lado izquierdo del abdomen.\n\n**Signos Vitales Iniciales:** FC 115 lpm, TA 100/70 mmHg, FR 22 rpm, SpO₂ 98%.",
+                        quiz: [{ 
+                            type: 'mcq', question: "Dada la taquicardia y la presión arterial límite del paciente, ¿cuál es el estudio de imagen inicial más apropiado?", options: ["Tomografía computarizada (TC) de abdomen.", "Lavado peritoneal diagnóstico (LPD).", "Ecografía FAST.", "Laparoscopia diagnóstica."], answer: 2, justification: "El FAST es el estudio de elección para pacientes hemodinámicamente anormales. Es rápido, no invasivo y se puede realizar en la cama del paciente, a diferencia de la TC que requiere un traslado que puede ser peligroso.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    },
+                    { 
+                        update: "Independientemente de tu elección inicial, se confirma la presencia de una gran cantidad de líquido intraabdominal. El paciente es llevado a quirófano para una laparotomía de emergencia.",
+                        quiz: [{
+                             type: 'mcq', question: "Durante la cirugía, se encuentra una laceración esplénica grado IV. ¿Cuál es el manejo quirúrgico más probable en este escenario?", options: ["Empaquetamiento peri-esplénico.", "Esplenorrafia (sutura del bazo).", "Esplenectomía (extirpación del bazo).", "Embolización arterial selectiva."], answer: 2, justification: "Una lesión esplénica de alto grado en un paciente que requirió laparotomía por inestabilidad hemodinámica generalmente se maneja con una esplenectomía para un control rápido y definitivo de la hemorragia.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    },
+                    { 
+                        update: "Se realiza una esplenectomía y el paciente se estabiliza. Durante la revisión secundaria en la unidad de cuidados postoperatorios, notas una marca lineal de equimosis en la parte inferior del abdomen.",
+                        quiz: [{
+                            type: 'mcq', question: "La presencia de este 'signo del cinturón de seguridad' te hace sospechar de una posible lesión asociada. ¿Cuál es la más común?", options: ["Lesión diafragmática", "Fractura de la columna lumbar (Chance) y lesión de intestino delgado", "Contusión renal", "Laceración hepática"], answer: 1, justification: "El signo del cinturón de seguridad es un fuerte predictor de lesiones intraabdominales, especialmente perforaciones de vísceras huecas (intestino) y fracturas por flexión-distracción de la columna lumbar.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    },
+                    { 
+                        update: "Horas después de la cirugía, el paciente desarrolla dolor abdominal difuso, fiebre de 38.5°C y un recuento de glóbulos blancos elevado.",
+                         quiz: [{
+                            type: 'mcq', question: "Considerando el mecanismo de lesión y los nuevos hallazgos, ¿cuál es el diagnóstico más probable para explicar este deterioro?", options: ["Neumonía postoperatoria", "Infección de la herida quirúrgica", "Perforación de intestino delgado no detectada", "Trombosis venosa profunda"], answer: 2, justification: "El desarrollo de peritonitis (dolor, fiebre, leucocitosis) después de un trauma con 'signo del cinturón de seguridad' es altamente sospechoso de una lesión de víscera hueca que fue omitida en la cirugía inicial.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    },
+                    { 
+                        update: "Debido a la alta sospecha de peritonitis, se realiza una segunda laparotomía que confirma y repara una pequeña perforación en el yeyuno. El paciente finalmente comienza una recuperación satisfactoria.",
+                        quiz: [
+                             { type: 'mcq', question: "Reflexionando sobre el caso, ¿por qué es tan fácil pasar por alto una lesión de intestino delgado inicialmente?", options: ["Porque rara vez sangran profusamente", "Porque los síntomas de peritonitis pueden tardar horas en desarrollarse", "Porque no siempre son visibles en la TC o durante la exploración inicial si son pequeñas", "Todas las anteriores"], answer: 3, justification: "Las lesiones de vísceras huecas son notorias por su presentación sutil. Pueden no causar una hemorragia masiva y los signos de peritonitis por contaminación bacteriana pueden tardar en manifestarse, haciendo crucial un alto índice de sospecha.", source: "(Capítulo 21, ATLS 11th Ed.)" }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 4,
+                title: "Capítulo 4: Caída de Altura",
+                type: 'evolutive',
+                summary: "Este caso simula el manejo de un paciente politraumatizado tras una caída, enfocándose en la interacción entre la hemorragia pélvica y el trauma torácico mayor.",
+                stages: [
+                    {
+                        clinicalCase: "Una mujer de 35 años cae desde un tercer piso (aproximadamente 9 metros). Llega al servicio de urgencias agitada, con dolor pélvico severo y dificultad para respirar.\n\n**Signos Vitales Iniciales:** FC 140 lpm, TA 80/50 mmHg, FR 30 rpm, SpO₂ 91%.",
+                        quiz: [{
+                            type: 'mcq', question: "Ante un paciente con hipotensión severa y sospecha de fractura pélvica, ¿cuál es la intervención mecánica inmediata y prioritaria?", options: ["Colocar férulas en ambas piernas.", "Aplicar una faja pélvica o sábana a nivel de los trocánteres mayores.", "Realizar una radiografía AP de pelvis.", "Manipular la pelvis para evaluar la inestabilidad."], answer: 1, justification: "La colocación de una faja pélvica es una prioridad para estabilizar mecánicamente el anillo pélvico, reducir el volumen pélvico y disminuir la hemorragia.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    },
+                    {
+                        update: "Se coloca la faja pélvica y se inicia la reanimación con hemoderivados. Una radiografía de tórax portátil muestra un mediastino ensanchado (>8 cm).",
+                        quiz: [{
+                            type: 'mcq', question: "¿Qué lesión potencialmente letal debe sospecharse con un mediastino ensanchado tras un mecanismo de desaceleración?", options: ["Neumotórax a tensión.", "Taponamiento cardíaco.", "Lesión aórtica cerrada (BAI).", "Ruptura diafragmática."], answer: 2, justification: "Un mediastino ensanchado es un signo radiográfico clásico asociado con la lesión aórtica cerrada, una emergencia vital.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    },
+                    {
+                        update: "El paciente se estabiliza lo suficiente para ser trasladado a la TC. La AngioTC de tórax confirma una lesión aórtica Grado III (pseudoaneurisma).",
+                        quiz: [{
+                            type: 'mcq', question: "¿Cuál es el manejo recomendado para una lesión aórtica Grado III?", options: ["Control estricto de la presión arterial únicamente.", "Observación y repetir la TC en 24 horas.", "Reparación (quirúrgica o endovascular).", "Colocación de un drenaje torácico."], answer: 2, justification: "Se recomienda la reparación para todas las lesiones Grado III (pseudoaneurisma) y Grado IV (ruptura) para prevenir una ruptura aórtica catastrófica.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    },
+                    {
+                        update: "El equipo de cirugía vascular y traumatología decide el manejo. Mientras se planifica la reparación aórtica, el paciente sigue requiriendo transfusiones.",
+                        quiz: [{
+                            type: 'mcq', question: "Además de la aorta, ¿cuál es la fuente más probable de la hemorragia persistente en este paciente?", options: ["Fracturas costales", "Hemorragia intracraneal", "La fractura pélvica", "Laceración hepática"], answer: 2, justification: "Las fracturas pélvicas, especialmente las de tipo compresión AP o cizallamiento vertical, pueden causar hemorragias masivas del plexo venoso posterior y ramas arteriales.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    },
+                    {
+                        update: "Se realiza una angiografía pélvica que muestra sangrado activo de una rama de la arteria ilíaca interna, la cual es embolizada con éxito.",
+                        quiz: [{
+                            type: 'mcq', question: "Este caso destaca que la hipotensión en trauma pélvico es causada principalmente por:", options: ["Lesión vesical.", "Lesión rectal.", "Hemorragia venosa en un 85% de los casos y arterial en un 15%.", "Lesiones de órganos sólidos abdominales."], answer: 2, justification: "Aunque la hemorragia arterial es significativa, la mayor parte de la hemorragia en fracturas pélvicas proviene de las superficies óseas y del plexo venoso retroperitoneal.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    }
+                ]
+            },
+            {
+                id: 5,
+                title: "Capítulo 5: Trauma Penetrante",
+                type: 'evolutive',
+                summary: "Este caso aborda las decisiones clave en el manejo de un paciente con una herida penetrante abdominal, diferenciando entre el manejo operatorio y el selectivo no operatorio.",
+                stages: [
+                    {
+                        clinicalCase: "Un joven de 19 años es traído tras sufrir una herida por arma blanca en el cuadrante superior izquierdo del abdomen. Está alerta y orientado, pero pálido y sudoroso.\n\n**Signos Vitales Iniciales:** FC 125 lpm, TA 88/50 mmHg, FR 20 rpm, SpO₂ 99%.",
+                        quiz: [{
+                            type: 'mcq', question: "¿Cuál es la indicación de manejo inmediata para este paciente?", options: ["Tomografía computarizada (TC) de abdomen.", "Laparotomía exploradora de emergencia.", "Exploración local de la herida.", "Observación y exámenes físicos seriados."], answer: 1, justification: "La inestabilidad hemodinámica (hipotensión, taquicardia) en un paciente con una herida penetrante abdominal es una indicación absoluta para una laparotomía inmediata.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    },
+                    {
+                        update: "Durante la laparotomía se encuentra una lesión en el diafragma y en el colon transverso, que son reparadas. El paciente se estabiliza. Más tarde, llega otro paciente con una herida por arma de fuego en el abdomen, pero está hemodinámicamente estable.",
+                        quiz: [{
+                            type: 'mcq', question: "A diferencia del primer caso, ¿por qué la mayoría de las heridas abdominales por arma de fuego se manejan con laparotomía exploradora, incluso si el paciente está estable?", options: ["Porque el riesgo de infección es mayor.", "Porque la trayectoria es impredecible y la incidencia de lesión intraperitoneal significativa es del 98%.", "Porque siempre causan peritonitis inmediata.", "Porque la exploración local de la herida es imposible."], answer: 1, justification: "Debido al alto riesgo de lesión visceral (cercano al 98%), la laparotomía exploradora es el estándar para la mayoría de las heridas de bala transperitoneales.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    },
+                    {
+                        update: "Ahora consideremos un tercer escenario: un paciente con una herida por arma blanca en el flanco derecho, hemodinámicamente estable y sin signos de peritonitis.",
+                        quiz: [{
+                            type: 'mcq', question: "¿Cuál es una estrategia de manejo aceptable para este tercer paciente estable?", options: ["Alta a domicilio con instrucciones de alarma.", "Laparotomía exploradora inmediata.", "Observación con exámenes físicos seriados y/o una TC con contraste.", "Únicamente un examen FAST."], answer: 2, justification: "Para pacientes estables sin indicaciones de cirugía, el manejo no operatorio selectivo, que incluye observación seriada y estudios de imagen como la TC, es una opción segura y aceptada para evitar laparotomías no terapéuticas.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    },
+                    {
+                        update: "En el paciente con la herida en el flanco, se realiza una TC que muestra la trayectoria del arma sin evidencia de lesión de órgano sólido o líquido libre, pero con posible afectación del espacio retroperitoneal.",
+                        quiz: [{
+                            type: 'mcq', question: "El principal desafío diagnóstico en las heridas penetrantes de flanco y espalda es la evaluación de:", options: ["El hígado y el bazo.", "El estómago y el diafragma.", "Las estructuras retroperitoneales (colon, riñón, duodeno).", "Los grandes vasos."], answer: 2, justification: "Las estructuras retroperitoneales están en riesgo y las lesiones pueden ser clínicamente ocultas, ya que no siempre producen peritonitis o hemorragia detectable por FAST/LPD.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    },
+                    {
+                        update: "El paciente del flanco permanece estable y asintomático durante 24 horas de observación y es dado de alta con seguimiento ambulatorio.",
+                        quiz: [{
+                            type: 'mcq', question: "¿Cuál es el órgano más comúnmente lesionado en heridas por arma blanca abdominal versus heridas por arma de fuego?", options: ["Bazo / Intestino delgado", "Hígado / Intestino delgado", "Diafragma / Colon", "Intestino delgado / Hígado"], answer: 1, justification: "Estadísticamente, el órgano más lesionado por arma blanca es el hígado (40%), mientras que por arma de fuego es el intestino delgado (50%).", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    }
+                ]
+            },
+            {
+                id: 6,
+                title: "Capítulo 6: Trauma Genitourinario",
+                type: 'evolutive',
+                summary: "Este caso se enfoca en el diagnóstico y manejo de lesiones genitourinarias y retroperitoneales en un paciente pediátrico tras un trauma cerrado específico.",
+                stages: [
+                    {
+                        clinicalCase: "Un niño de 12 años es traído después de caer sobre el manillar de su bicicleta. Se queja de dolor abdominal intenso. Está llorando y ansioso.\n\n**Signos Vitales Iniciales:** FC 110 lpm, TA 105/75 mmHg, FR 20 rpm, SpO₂ 99%.",
+                        quiz: [{
+                            type: 'mcq', question: "Este mecanismo de lesión (golpe directo en el epigastrio) es clásico para comprimir qué dos órganos retroperitoneales contra la columna vertebral?", options: ["Riñones y bazo.", "Hígado y estómago.", "Páncreas y duodeno.", "Aorta y vena cava."], answer: 2, justification: "El golpe directo en el epigastrio es el mecanismo clásico para lesiones pancreáticas y duodenales por compresión contra la columna.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    },
+                    {
+                        update: "Durante la exploración física, observas sangre en el meato uretral.",
+                        quiz: [{
+                            type: 'mcq', question: "¿Qué acción está formalmente contraindicada ante este hallazgo?", options: ["Realizar una ecografía FAST.", "Obtener una radiografía de pelvis.", "Insertar una sonda urinaria (catéter de Foley).", "Administrar analgésicos."], answer: 2, justification: "No se debe colocar una sonda urinaria hasta que se haya descartado una lesión uretral mediante un uretrograma, para no convertir una lesión parcial en una completa.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    },
+                    {
+                        update: "Se sospecha una lesión uretral. El paciente permanece hemodinámicamente normal.",
+                        quiz: [{
+                            type: 'mcq', question: "¿Qué estudio diagnóstico se debe realizar ANTES de cualquier intento de cateterismo vesical?", options: ["Cistograma por TC.", "Pielograma intravenoso (PIV).", "Uretrograma retrógrado (RUG).", "Ecografía renal."], answer: 2, justification: "Un uretrograma retrógrado es obligatorio para evaluar la integridad de la uretra cuando se sospecha una lesión.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    },
+                    {
+                        update: "El RUG es normal, por lo que se coloca una sonda urinaria y se obtiene orina macroscópicamente hemática. Se realiza una TC de abdomen con contraste IV.",
+                        quiz: [{
+                            type: 'mcq', question: "La hematuria macroscópica es una indicación fuerte para obtener imágenes del tracto urinario. ¿Qué estudio es el más completo para evaluar el parénquima renal y el sistema colector?", options: ["Ecografía Doppler renal.", "Radiografía simple.", "TC con contraste IV.", "Pielograma retrógrado."], answer: 2, justification: "La TC con contraste es el estándar de oro para documentar la presencia y extensión de una lesión renal, permitiendo la estadificación y la planificación del tratamiento.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    },
+                    {
+                        update: "La TC revela una contusión renal derecha (lesión Grado II) y una pequeña cantidad de aire retroperitoneal cerca del duodeno.",
+                        quiz: [{
+                            type: 'mcq', question: "El hallazgo de aire retroperitoneal en la TC, incluso si es sutil, es muy sugestivo de una ruptura de qué órgano?", options: ["Estómago.", "Colon sigmoide.", "Duodeno.", "Bazo."], answer: 2, justification: "El aire retroperitoneal en una radiografía o TC debe levantar una alta sospecha de lesión duodenal, ya que gran parte de este es retroperitoneal.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    }
+                ]
+            },
+            {
+                id: 7,
+                title: "Capítulo 7: Trauma por Explosión",
+                type: 'evolutive',
+                summary: "Este caso explora la complejidad del trauma por explosión, abordando las lesiones primarias (onda expansiva), secundarias (fragmentos) y terciarias (impacto).",
+                stages: [
+                    {
+                        clinicalCase: "Un trabajador de 45 años sufre una explosión en un taller. Es encontrado a varios metros del epicentro. Está confuso, con quemaduras faciales y dificultad para respirar.\n\n**Signos Vitales Iniciales:** FC 130 lpm, TA 90/60 mmHg, FR 28 rpm, SpO₂ 88%.",
+                        quiz: [{
+                            type: 'mcq', question: "En una víctima de explosión, además de las lesiones evidentes, ¿qué otros dos mecanismos de lesión deben considerarse siempre?", options: ["Químico y radiológico.", "Térmico e inhalación.", "Penetrante (fragmentos) y cerrado (por ser lanzado).", "Eléctrico y por aplastamiento."], answer: 2, justification: "Las lesiones por explosión son complejas y a menudo combinan la onda de sobrepresión con heridas penetrantes por metralla y trauma cerrado por la proyección del cuerpo o el impacto de objetos.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    },
+                    {
+                        update: "Se asegura la vía aérea. Durante la revisión primaria, se evidencia enfisema subcutáneo en el cuello y tórax superior. A la auscultación, se oye un 'crujido' sincrónico con los latidos del corazón (signo de Hamman).",
+                        quiz: [{
+                            type: 'mcq', question: "El hallazgo de aire en el mediastino (neumomediastino) y el signo de Hamman son sugestivos de lesión en ¿cuáles de las siguientes estructuras?", options: ["Aorta y vena cava.", "Hígado y bazo.", "Tráquea/bronquios o esófago.", "Estómago y duodeno."], answer: 2, justification: "El aire en el mediastino puede originarse en el árbol traqueobronquial, el esófago o por disección desde los alvéolos. El signo de Hamman es clásico del neumomediastino.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    },
+                    {
+                        update: "Se realiza una TC de tórax que confirma el neumomediastino y contusiones pulmonares bilaterales. El paciente está estable.",
+                        quiz: [{
+                            type: 'mcq', question: "Para investigar más a fondo una posible lesión esofágica en este paciente estable, ¿cuáles son los estudios más sensibles?", options: ["Radiografía de tórax y ecografía.", "Tránsito baritado y manometría.", "TC y esofagoscopia.", "Gammagrafía y LPD."], answer: 2, justification: "Para pacientes estables, la TC (que puede mostrar aire o líquido periesofágico) y la esofagoscopia son los estudios más sensibles para diagnosticar una lesión esofágica.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    },
+                    {
+                        update: "La esofagoscopia descarta una lesión esofágica. Se concluye que el neumomediastino es secundario a la ruptura alveolar por la onda expansiva (barotrauma pulmonar).",
+                        quiz: [{
+                            type: 'mcq', question: "¿Cuál es la causa más común de neumomediastino traumático?", options: ["Ruptura esofágica.", "Ruptura traqueal mayor.", "Ruptura de alvéolos con disección de aire a lo largo de las vainas bronquiales.", "Perforación duodenal."], answer: 2, justification: "La mayoría de los casos de neumomediastino traumático se deben a la ruptura alveolar por aumento de la presión intratorácica (barotrauma), lo que causa que el aire diseque hacia el mediastino.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    },
+                    {
+                        update: "El paciente es ingresado en la UCI para monitorización. Se mantiene un alto índice de sospecha para lesiones intestinales por la onda expansiva.",
+                        quiz: [{
+                            type: 'mcq', question: "¿Por qué es importante considerar si la explosión ocurrió en un espacio cerrado?", options: ["Para fines legales únicamente.", "Porque aumenta la probabilidad y severidad de las lesiones por la onda de sobrepresión.", "Porque determina el tipo de quemaduras.", "Porque cambia el manejo de la vía aérea."], answer: 1, justification: "Una explosión en un espacio cerrado amplifica los efectos de la onda de sobrepresión, aumentando el riesgo de lesiones en órganos que contienen aire, como los pulmones y el intestino.", source: "(Capítulo 21, ATLS 11th Ed.)"
+                        }]
+                    }
+                ]
+            }
+        ]; 
+        let userProgress = {};
+        let currentModuleId = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProgress();
+            renderModuleList();
+            
+            let lastModuleId = null;
+            try {
+                lastModuleId = localStorage.getItem('atlsLastModuleId');
+            } catch (e) {
+                console.error("Error al obtener el último módulo:", e);
+            }
+            displayModule(lastModuleId ? parseInt(lastModuleId) : null);
+
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            const resetButton = document.getElementById('reset-button');
+            const resetModal = document.getElementById('reset-modal');
+            const cancelReset = document.getElementById('cancel-reset');
+            const confirmReset = document.getElementById('confirm-reset');
+            const menuToggle = document.getElementById('menu-toggle');
+            const sidebar = document.getElementById('sidebar');
+            const sidebarOverlay = document.getElementById('sidebar-overlay');
+            
+            resetButton.addEventListener('click', () => {
+                resetModal.classList.remove('hidden');
+                setTimeout(() => {
+                    resetModal.querySelector('div').classList.remove('scale-95');
+                }, 10);
+            });
+            cancelReset.addEventListener('click', () => {
+                resetModal.querySelector('div').classList.add('scale-95');
+                setTimeout(() => resetModal.classList.add('hidden'), 300);
+            });
+            confirmReset.addEventListener('click', resetProgress);
+            
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('-translate-x-full');
+                sidebarOverlay.classList.toggle('hidden');
+            });
+            sidebarOverlay.addEventListener('click', () => {
+                sidebar.classList.add('-translate-x-full');
+                sidebarOverlay.classList.add('hidden');
+            });
+        }
+        
+        function initializeProgress() {
+            userProgress = {};
+            courseModules.forEach(module => {
+                userProgress[module.id] = { completed: false, score: 0, answers: {}, currentStage: 0 };
+            });
+        }
+        
+        function loadProgress() {
+            try {
+                const savedProgress = localStorage.getItem('atlsCourseProgress');
+                if (savedProgress) { 
+                    const parsedProgress = JSON.parse(savedProgress);
+                    userProgress = parsedProgress;
+                    courseModules.forEach(module => {
+                        if (!userProgress[module.id]) {
+                            userProgress[module.id] = { completed: false, score: 0, answers: {}, currentStage: 0 };
+                        }
+                         // Reset path for evolutive modules if they exist from old logic
+                        if (userProgress[module.id].path) {
+                           delete userProgress[module.id].path;
+                        }
+                    });
+                } else {
+                    initializeProgress();
+                }
+            } catch (e) {
+                console.error("Error al cargar el progreso:", e);
+                initializeProgress();
+            }
+            updateProgressBar();
+        }
+
+        function saveProgress() {
+            try {
+                localStorage.setItem('atlsCourseProgress', JSON.stringify(userProgress));
+                if (currentModuleId) {
+                    localStorage.setItem('atlsLastModuleId', currentModuleId);
+                }
+            } catch (e) {
+                console.error("Error al guardar el progreso:", e);
+            }
+        }
+        
+        function resetProgress() {
+            try {
+                localStorage.removeItem('atlsCourseProgress');
+                localStorage.removeItem('atlsLastModuleId');
+            } catch (e) {
+                console.error("Error al reiniciar el progreso:", e);
+            }
+            window.location.reload();
+        }
+
+        function renderModuleList() {
+            const list = document.getElementById('module-list');
+            list.innerHTML = '';
+            courseModules.forEach(module => {
+                const li = document.createElement('li');
+                const isCompleted = userProgress[module.id] && userProgress[module.id].completed;
+                const isActive = module.id === currentModuleId;
+
+                const baseClasses = 'p-3 rounded-lg cursor-pointer transition-all duration-200 flex items-center gap-3';
+                let stateClasses = 'bg-slate-700 hover:bg-slate-600 hover:pl-4';
+                let iconHtml = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-70 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 16c1.255 0 2.443-.29 3.5-.804V4.804zM14.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 0114.5 16c1.255 0 2.443-.29 3.5-.804v-10A7.968 7.968 0 0014.5 4z" /></svg>`;
+                
+                if (isCompleted) {
+                    stateClasses = 'bg-emerald-800/80 hover:bg-emerald-700/80 text-emerald-300';
+                    iconHtml = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>`;
+                }
+                if (isActive) {
+                    stateClasses = 'bg-sky-600 font-bold text-white shadow-lg';
+                }
+                
+                li.className = `${baseClasses} ${stateClasses}`;
+                li.innerHTML = `${iconHtml} <span class="truncate">${module.id}: ${module.title.split(': ')[1] || module.title}</span>`;
+                li.dataset.moduleId = module.id;
+                li.onclick = () => {
+                    displayModule(module.id);
+                    if (window.innerWidth < 1024) {
+                        document.getElementById('sidebar').classList.add('-translate-x-full');
+                        document.getElementById('sidebar-overlay').classList.add('hidden');
+                    }
+                };
+                list.appendChild(li);
+            });
+        }
+        
+        function displayWelcomeScreen() {
+             const displayArea = document.getElementById('module-display');
+             const completedCount = Object.values(userProgress).filter(p => p.completed).length;
+             const totalCount = courseModules.length;
+             const firstUncompleted = courseModules.find(m => !userProgress[m.id].completed);
+             const buttonText = completedCount > 0 ? "Continuar Curso" : "Comenzar Curso";
+             const targetModuleId = firstUncompleted ? firstUncompleted.id : courseModules[0].id;
+            
+             displayArea.innerHTML = `
+                 <div class="bg-white p-8 sm:p-12 rounded-2xl shadow-xl text-center">
+                     <h2 class="text-3xl sm:text-4xl font-bold text-slate-800">Bienvenido al Curso de Preparación ATLS</h2>
+                     <p class="text-slate-600 mt-3 max-w-2xl mx-auto">Este curso interactivo está diseñado para evaluar y reforzar tus conocimientos sobre los principios del Soporte Vital Avanzado en Trauma.</p>
+                     <div class="mt-8">
+                         <p class="text-lg font-semibold text-slate-700">Tu Progreso:</p>
+                         <p class="text-4xl font-bold text-sky-600 mt-2">${completedCount} / ${totalCount} Módulos Completados</p>
+                     </div>
+                     <button class="mt-10 bg-sky-600 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all hover:bg-sky-700 active:scale-95 text-lg" onclick="displayModule(${targetModuleId})">
+                         ${buttonText}
+                     </button>
+                 </div>
+             `;
+        }
+
+        function displayModule(moduleId) {
+            document.getElementById('main-content').scrollTop = 0;
+            const displayArea = document.getElementById('module-display');
+            displayArea.classList.add('opacity-0');
+
+            setTimeout(() => {
+                currentModuleId = moduleId ? parseInt(moduleId) : null;
+                
+                if (!currentModuleId) {
+                    displayWelcomeScreen();
+                    renderModuleList();
+                    displayArea.classList.remove('opacity-0');
+                    return;
+                }
+            
+                const moduleData = courseModules.find(m => m.id === currentModuleId);
+                
+                localStorage.setItem('atlsLastModuleId', currentModuleId);
+                
+                if (userProgress[currentModuleId] && userProgress[currentModuleId].completed) {
+                    showCompletedModule(currentModuleId);
+                } else {
+                    showActiveModule(currentModuleId);
+                }
+
+                renderModuleList();
+                displayArea.classList.remove('opacity-0');
+            }, 200);
+        }
+
+        function showActiveModule(moduleId) {
+            const moduleData = courseModules.find(m => m.id === moduleId);
+            const progressData = userProgress[moduleId];
+            const displayArea = document.getElementById('module-display');
+            
+            let clinicalInfoHtml = '';
+            let quiz, buttonText;
+            let quizSectionHtml = '';
+
+            if (moduleData.type === 'evolutive') {
+                const currentStageIndex = progressData.currentStage || 0;
+                const currentStage = moduleData.stages[currentStageIndex];
+                
+                clinicalInfoHtml += `<h3 class="text-xl font-bold text-slate-800 mb-3">Caso Clínico (Etapa ${currentStageIndex + 1}/${moduleData.stages.length})</h3>`;
+
+                if (currentStage.clinicalCase) {
+                    clinicalInfoHtml += `<div class="case-study bg-amber-50 border-l-4 border-amber-500 p-5 rounded-r-lg text-amber-900 space-y-2 mb-4">${currentStage.clinicalCase.replace(/\n/g, '<br>')}</div>`;
+                }
+                if (currentStage.update) {
+                    clinicalInfoHtml += `<div class="case-study bg-sky-50 border-l-4 border-sky-500 p-5 rounded-r-lg text-sky-900 space-y-2 mb-4"><strong>Actualización:</strong> ${currentStage.update}</div>`;
+                }
+
+                quiz = currentStage.quiz;
+                buttonText = (currentStageIndex < moduleData.stages.length - 1) ? "Siguiente Etapa" : "Finalizar Simulación";
+                
+                let quizHtml = `<form class="quiz-form space-y-6 mt-8" id="quiz-form-${moduleId}">`;
+                quiz.forEach((q, index) => {
+                    quizHtml += renderQuestion(q, index, moduleId, moduleData);
+                });
+                quizHtml += `<button type="button" class="submit-quiz-btn w-full sm:w-auto bg-sky-600 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all hover:bg-sky-700 active:scale-95" onclick="submitAnswers(${moduleId})">${buttonText}</button></form>`;
+                quizSectionHtml = `<div class="mt-8"><h3 class="text-xl font-bold text-slate-800">Toma de Decisión</h3>${quizHtml}</div>`;
+
+            } else { // Static module
+                clinicalInfoHtml = `<h3 class="text-xl font-bold text-slate-800 mb-3">Caso Clínico</h3><div class="case-study bg-amber-50 border-l-4 border-amber-500 p-5 rounded-r-lg text-amber-900 space-y-2">${moduleData.clinicalCase}</div>`;
+                quiz = moduleData.quiz;
+                buttonText = "Validar Respuestas";
+                let quizHtml = `<form class="quiz-form space-y-6 mt-8" id="quiz-form-${moduleId}">`;
+                quiz.forEach((q, index) => {
+                    quizHtml += renderQuestion(q, index, moduleId, moduleData);
+                });
+                quizHtml += `<button type="button" class="submit-quiz-btn w-full sm:w-auto bg-sky-600 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all hover:bg-sky-700 active:scale-95" onclick="submitAnswers(${moduleId})">${buttonText}</button></form>`;
+                quizSectionHtml = `<div class="mt-8"><h3 class="text-xl font-bold text-slate-800">Test de Autoevaluación</h3>${quizHtml}</div>`;
+            }
+
+            displayArea.innerHTML = `
+                <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl">
+                    <h2 class="text-2xl sm:text-3xl font-bold text-slate-900">${moduleData.title}</h2>
+                    <div class="mt-6">${clinicalInfoHtml}</div>
+                    ${quizSectionHtml}
+                </div>`;
+            
+            if (quiz) {
+                quiz.forEach((q, index) => {
+                    if (q.type === 'dnd') {
+                        setupDragAndDrop(moduleId, index);
+                    }
+                });
+            }
+        }
+
+        function renderQuestion(q, index, moduleId, moduleData){
+            const questionNumber = moduleData.type === 'evolutive' ? '' : `${index + 1}. `;
+            let questionHtml = `<div class="question-block bg-white p-6 rounded-xl shadow-lg border border-slate-100" id="q-block-${moduleId}-${index}">
+                                <p class="font-semibold text-slate-800 mb-4 text-base sm:text-lg">${questionNumber}${q.question.replace('BLANK', '_____')}</p>`;
+             switch (q.type) {
+                case 'image':
+                    questionHtml += `<div class="mb-4"><img src="${q.imageUrl}" alt="Imagen del caso clínico" class="rounded-lg shadow-md mx-auto"></div>`;
+                case 'mcq':
+                    questionHtml += `<div class="space-y-3">`;
+                    q.options.forEach((opt, optIndex) => {
+                        const optionText = typeof opt === 'string' ? opt : opt.text;
+                        questionHtml += `<label class="flex items-center p-4 border-2 border-slate-200 rounded-lg cursor-pointer transition-all duration-200 hover:bg-sky-50 hover:border-sky-400 has-[:checked]:bg-sky-100 has-[:checked]:border-sky-500 has-[:checked]:ring-2 has-[:checked]:ring-sky-200">
+                                        <input type="radio" name="q${index}" value="${optIndex}" class="h-5 w-5 text-sky-600 border-slate-300 focus:ring-sky-500 focus:ring-2">
+                                        <span class="ml-4 text-slate-700">${optionText}</span>
+                                   </label>`;
+                    });
+                    questionHtml += `</div>`;
+                    break;
+                case 'fib':
+                     questionHtml = questionHtml.replace('_____', `<input type="text" name="q${index}" class="mt-2 block w-full sm:w-1/2 rounded-md border-slate-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm" placeholder="Escribe tu respuesta aquí">`);
+                    break;
+                case 'dnd':
+                    questionHtml += `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <h4 class="font-semibold text-slate-600 mb-2 text-center">Opciones</h4>
+                                <div id="dnd-source-${index}" class="space-y-2 p-2 rounded-lg bg-slate-100 min-h-[100px]">
+                                    ${q.options.map((opt, i) => `<div id="drag-${moduleId}-${index}-${i}" class="draggable-item bg-white p-3 rounded-lg shadow border border-slate-200" draggable="true">${opt}</div>`).join('')}
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-600 mb-2 text-center">Tu Orden</h4>
+                                <div id="dnd-dropzone-${index}" class="dropzone p-2 rounded-lg space-y-2"></div>
+                            </div>
+                        </div>`;
+                    break;
+            }
+            questionHtml += `</div>`;
+            return questionHtml;
+        }
+        
+        function setupDragAndDrop(moduleId, questionIndex) {
+            const sourceContainer = document.getElementById(`dnd-source-${questionIndex}`);
+            const dropzone = document.getElementById(`dnd-dropzone-${questionIndex}`);
+            if (!sourceContainer || !dropzone) return;
+            const draggables = sourceContainer.querySelectorAll('.draggable-item');
+
+            const allContainers = [sourceContainer, dropzone];
+
+            draggables.forEach(draggable => {
+                draggable.addEventListener('dragstart', () => {
+                    draggable.classList.add('dragging');
+                });
+                draggable.addEventListener('dragend', () => {
+                    draggable.classList.remove('dragging');
+                });
+            });
+
+            allContainers.forEach(container => {
+                container.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    container.classList.add('drag-over');
+                });
+                container.addEventListener('dragleave', () => {
+                    container.classList.remove('drag-over');
+                });
+
+                container.addEventListener('drop', e => {
+                    e.preventDefault();
+                    container.classList.remove('drag-over');
+                    const draggable = document.querySelector('.dragging');
+                    if (draggable) {
+                        container.appendChild(draggable);
+                    }
+                });
+            });
+        }
+
+        function showCompletedModule(moduleId) {
+            const moduleData = courseModules.find(m => m.id === parseInt(moduleId));
+            const progressData = userProgress[moduleId];
+            const displayArea = document.getElementById('module-display');
+            const nextModule = courseModules.find(m => m.id === moduleId + 1);
+
+            let reviewHtml = '';
+            
+            if(moduleData.type === 'evolutive') {
+                reviewHtml += `<h3 class="text-xl font-bold text-slate-800 mt-8">Revisión de la Simulación:</h3>`;
+                moduleData.stages.forEach((stage, stageIndex) => {
+                    const userAnswerForStage = progressData.answers[stageIndex];
+                    
+                    reviewHtml += `<div class="mt-6 pt-6 border-t border-slate-200">`;
+                    reviewHtml += `<h4 class="text-lg font-bold text-slate-700 mb-4">Etapa ${stageIndex + 1}</h4>`;
+
+                    if (stage.clinicalCase) {
+                        reviewHtml += `<div class="case-study bg-amber-50 border-l-4 border-amber-500 p-5 rounded-r-lg text-amber-900 space-y-2 mb-4">${stage.clinicalCase.replace(/\n/g, '<br>')}</div>`;
+                    }
+                    if (stage.update) {
+                        reviewHtml += `<div class="case-study bg-sky-50 border-l-4 border-sky-500 p-5 rounded-r-lg text-sky-900 space-y-2 mb-4"><strong>Actualización:</strong> ${stage.update}</div>`;
+                    }
+
+                    stage.quiz.forEach((q, qIndex) => {
+                        const userAnswerIndex = userAnswerForStage ? userAnswerForStage[qIndex] : undefined;
+                        const isCorrect = userAnswerIndex === q.answer;
+                        const chosenOptionText = (userAnswerIndex !== undefined) ? q.options[userAnswerIndex] : "No respondida";
+                        const correctOptionText = q.options[q.answer];
+
+                        let feedbackHeader = `<p class="text-slate-600">Tu respuesta: <strong class="${isCorrect ? 'text-emerald-600' : 'text-red-600'}">${chosenOptionText}</strong></p>`;
+                        if (!isCorrect && userAnswerIndex !== undefined) {
+                            feedbackHeader += `<p class="mt-1 text-slate-600">Respuesta correcta: <strong class="text-emerald-600">${correctOptionText}</strong></p>`;
+                        }
+
+                        reviewHtml += `<div class="bg-white p-4 rounded-xl shadow-lg border border-slate-100">
+                            <div class="flex justify-between items-start mb-2">
+                                <p class="font-semibold text-slate-800 pr-4">${q.question}</p>
+                                <span class="flex-shrink-0 font-bold py-1 px-3 rounded-full text-sm ${isCorrect ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}">
+                                    ${isCorrect ? 'Correcta' : 'Incorrecta'}
+                                </span>
+                            </div>
+                            ${feedbackHeader}
+                            <div class="mt-3 p-3 rounded-lg border-l-4 bg-slate-50 border-slate-400 text-slate-800">
+                                <p><strong class="font-bold">Justificación:</strong> ${q.justification}</p>
+                                <p class="text-sm italic mt-2 opacity-80">Fuente: ${q.source}</p>
+                            </div>
+                        </div>`;
+                    });
+                     reviewHtml += `</div>`;
+                });
+            } else { // Static module review
+                 reviewHtml += `<h3 class="text-xl font-bold text-slate-800 mt-8">Resultados del Test</h3><div class="space-y-8 mt-6">`;
+                 moduleData.quiz.forEach((q, index) => {
+                    const userAnswer = progressData.answers[index];
+                    let isCorrect = false;
+                    let feedbackHtml = '';
+
+                    switch (q.type) {
+                        case 'image':
+                        case 'mcq':
+                            isCorrect = userAnswer === q.answer;
+                            break;
+                        case 'fib':
+                            isCorrect = userAnswer && q.answer && userAnswer.toLowerCase() === q.answer.toLowerCase();
+                            break;
+                        case 'dnd':
+                            isCorrect = JSON.stringify(userAnswer) === JSON.stringify(q.correctOrder);
+                            break;
+                    }
+
+                    feedbackHtml += `<div class="bg-white p-4 rounded-xl shadow-lg border border-slate-100">`;
+                    feedbackHtml += `<div class="flex justify-between items-start mb-2">
+                                        <p class="font-semibold text-slate-800 pr-4">${index + 1}. ${q.question.replace('BLANK', '_____')}</p>
+                                        <span class="flex-shrink-0 font-bold py-1 px-3 rounded-full text-sm ${isCorrect ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}">
+                                            ${isCorrect ? 'Correcta' : 'Incorrecta'}
+                                        </span>
+                                     </div>`;
+
+                    switch (q.type) {
+                        case 'image':
+                             feedbackHtml += `<div class="my-4"><img src="${q.imageUrl}" alt="Imagen del caso clínico" class="rounded-lg shadow-md mx-auto"></div>`;
+                        case 'mcq':
+                            feedbackHtml += `<div class="space-y-3">`;
+                            q.options.forEach((opt, optIndex) => {
+                                const isUserAnswer = optIndex === userAnswer;
+                                const isCorrectAnswer = optIndex === q.answer;
+                                let labelClasses = 'flex items-center justify-between p-4 border-2 rounded-lg';
+                                let icon = '';
+
+                                if (isCorrectAnswer) {
+                                    labelClasses += ' bg-emerald-50 border-emerald-500';
+                                    if (isUserAnswer) icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-emerald-600" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>`;
+                                } else if (isUserAnswer) {
+                                    labelClasses += ' bg-red-50 border-red-500';
+                                    icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-600" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg>`;
+                                } else {
+                                    labelClasses += ' border-slate-200 bg-slate-50 opacity-80';
+                                }
+                                feedbackHtml += `<div class="${labelClasses}"><span class="text-slate-700">${opt}</span>${icon}</div>`;
+                            });
+                            feedbackHtml += `</div>`;
+                            break;
+                        case 'fib':
+                            feedbackHtml += `<p class="text-slate-600">Tu respuesta: <strong class="${isCorrect ? 'text-emerald-600' : 'text-red-600'}">${userAnswer || 'No respondida'}</strong></p>`;
+                            if (!isCorrect) {
+                                feedbackHtml += `<p class="mt-1 text-slate-600">Respuesta correcta: <strong class="text-emerald-600">${q.answer}</strong></p>`;
+                            }
+                            break;
+                        case 'dnd':
+                            feedbackHtml += `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <h4 class="font-semibold mb-2 text-center ${isCorrect ? 'text-emerald-700' : 'text-red-700'}">Tu Orden</h4>
+                                                    <div class="space-y-2 p-2 rounded-lg ${isCorrect ? 'bg-emerald-50 border-2 border-emerald-300' : 'bg-red-50 border-2 border-red-300'}">
+                                                        ${(userAnswer || []).map(opt => `<div class="bg-white p-3 rounded-lg shadow-sm border">${opt}</div>`).join('')}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <h4 class="font-semibold text-slate-600 mb-2 text-center">Orden Correcto</h4>
+                                                    <div class="space-y-2 p-2 rounded-lg bg-slate-100">
+                                                        ${q.correctOrder.map(opt => `<div class="bg-white p-3 rounded-lg shadow-sm border">${opt}</div>`).join('')}
+                                                    </div>
+                                                </div>
+                                             </div>`;
+                            break;
+                    }
+                    feedbackHtml += `<div class="mt-3 p-3 rounded-lg border-l-4 bg-slate-50 border-slate-400 text-slate-800">
+                                        <p><strong class="font-bold">Justificación:</strong> ${q.justification}</p>
+                                        <p class="text-sm italic mt-2 opacity-80">Fuente: ${q.source}</p>
+                                     </div>`;
+                    feedbackHtml += `</div>`;
+                    reviewHtml += feedbackHtml;
+                 });
+                 reviewHtml += `</div>`;
+            }
+
+            let nextModuleButton = '';
+            if (nextModule) {
+                nextModuleButton = `<button class="mt-10 w-full sm:w-auto bg-sky-600 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all hover:bg-sky-700 active:scale-95 text-lg" onclick="displayModule(${nextModule.id})">
+                    Continuar al Módulo ${nextModule.id}
+                </button>`;
+            } else {
+                 nextModuleButton = `<p class="mt-10 font-semibold text-emerald-600">¡Felicidades, has completado todos los módulos!</p>`;
+            }
+
+            displayArea.innerHTML = `
+                <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl">
+                    <h2 class="text-2xl sm:text-3xl font-bold text-slate-900">${moduleData.title} (Revisión)</h2>
+                    <div class="module-summary mt-6 bg-sky-50 border-l-4 border-sky-500 p-5 rounded-r-lg text-sky-900">
+                        <h3 class="font-bold text-lg mb-2">Resumen del Módulo</h3>
+                        <p>${moduleData.summary}</p>
+                    </div>
+                    ${reviewHtml}
+                    <div class="text-center">
+                        ${nextModuleButton}
+                    </div>
+                </div>`;
+        }
+        
+        function finishModule(moduleId) {
+            const progressData = userProgress[moduleId];
+            progressData.completed = true;
+            saveProgress();
+            updateProgressBar();
+            renderModuleList();
+            showCompletedModule(moduleId);
+            checkCourseCompletion();
+        }
+
+        function submitAnswers(moduleId) {
+            const moduleData = courseModules.find(m => m.id === moduleId);
+            const progressData = userProgress[moduleId];
+            const form = document.getElementById('quiz-form-' + moduleId);
+
+            if (moduleData.type === 'evolutive') {
+                const currentStageIndex = progressData.currentStage || 0;
+                const currentStage = moduleData.stages[currentStageIndex];
+                
+                if(!progressData.answers[currentStageIndex]) progressData.answers[currentStageIndex] = {};
+                
+                let allAnswered = true;
+
+                currentStage.quiz.forEach((q, qIndex) => {
+                    const selectedOption = form.querySelector(`input[name="q${qIndex}"]:checked`);
+                    if(selectedOption) {
+                        const answerIndex = parseInt(selectedOption.value);
+                        progressData.answers[currentStageIndex][qIndex] = answerIndex;
+                        if(answerIndex === q.answer) {
+                            progressData.score++;
+                        }
+                    } else {
+                        allAnswered = false;
+                    }
+                });
+
+                if(!allAnswered) {
+                    alert("Por favor, selecciona una opción para continuar.");
+                    return;
+                }
+                
+                if (currentStageIndex < moduleData.stages.length - 1) {
+                    progressData.currentStage++;
+                    saveProgress();
+                    displayModule(moduleId); 
+                } else {
+                    finishModule(moduleId);
+                }
+
+            } else { // Static module
+                let allStaticAnswered = true;
+                moduleData.quiz.forEach((q, index) => {
+                    let answer;
+                     switch (q.type) {
+                        case 'image': case 'mcq':
+                            const selectedOption = form.querySelector(`input[name="q${index}"]:checked`);
+                            answer = selectedOption ? parseInt(selectedOption.value) : null;
+                            if (answer === q.answer) progressData.score++;
+                            if(answer === null) allStaticAnswered = false;
+                            break;
+                        case 'fib':
+                            const input = form.querySelector(`input[name="q${index}"]`);
+                            answer = input.value.trim();
+                            if (answer.toLowerCase() === q.answer.toLowerCase()) progressData.score++;
+                            if(answer === '') allStaticAnswered = false;
+                            break;
+                        case 'dnd':
+                            const dropzone = document.getElementById(`dnd-dropzone-${index}`);
+                            answer = Array.from(dropzone.children).map(item => item.textContent);
+                            if (JSON.stringify(answer) === JSON.stringify(q.correctOrder)) progressData.score++;
+                            if(answer.length === 0) allStaticAnswered = false;
+                            break;
+                    }
+                    progressData.answers[index] = answer;
+                });
+                
+                if(!allStaticAnswered) {
+                    alert("Por favor, responde todas las preguntas antes de validar.");
+                    return;
+                }
+
+                progressData.completed = true;
+                saveProgress();
+                updateProgressBar();
+                renderModuleList();
+                showCompletedModule(moduleId);
+                checkCourseCompletion();
+            }
+        }
+
+        function updateProgressBar() {
+            const completedModules = Object.values(userProgress).filter(p => p && p.completed).length;
+            const totalModules = courseModules.length;
+            const percentage = totalModules > 0 ? (completedModules / totalModules) * 100 : 0;
+            
+            const progressBar = document.getElementById('progress-bar');
+            progressBar.style.width = percentage + '%';
+            progressBar.textContent = Math.round(percentage) + '%';
+        }
+
+        function checkCourseCompletion() {
+            const completedModules = Object.values(userProgress).filter(p => p && p.completed).length;
+            if (completedModules === courseModules.length) {
+                setTimeout(calculateFinalScore, 2000);
+            }
+        }
+
+        function calculateFinalScore() {
+            let totalScore = 0;
+            let totalQuestions = 0;
+            
+            courseModules.forEach(module => {
+                if(userProgress[module.id] && userProgress[module.id].completed) {
+                    totalScore += userProgress[module.id].score;
+                    if (module.type === 'evolutive') {
+                         module.stages.forEach(stage => {
+                             if(stage.quiz) totalQuestions += stage.quiz.length;
+                         });
+                    } else {
+                        totalQuestions += module.quiz.length;
+                    }
+                }
+            });
+            
+            const finalPercentage = totalQuestions > 0 ? (totalScore / totalQuestions) * 100 : 0;
+            
+            const displayArea = document.getElementById('module-display');
+            displayArea.innerHTML = `
+                <div id="final-score-screen" class="text-center bg-white p-8 sm:p-12 rounded-2xl shadow-xl transform transition-all duration-500 scale-100 opacity-100">
+                    <h2 class="text-3xl sm:text-4xl font-bold text-sky-600">¡Curso Completado!</h2>
+                    <p class="text-slate-600 mt-2">Has finalizado todos los módulos de preparación para el ATLS.</p>
+                    <p class="mt-6 text-slate-700">Tu calificación final es:</p>
+                    <p id="score-value" class="text-5xl sm:text-7xl font-bold text-slate-800 mt-2">${Math.round(finalPercentage)}<span class="text-3xl text-slate-500"> / 100</span></p>
+                </div>`;
+        }
+    </script>
 </body>
 </html>
+
